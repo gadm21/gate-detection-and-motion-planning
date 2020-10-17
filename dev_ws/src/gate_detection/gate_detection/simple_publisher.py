@@ -81,8 +81,8 @@ def to_hist(image):
     for p in image.ravel():
         if d.get(p): d[p] +=1 
         else : d[p] = 1
-    print(d) 
-    print()
+    #print(d) 
+    #print()
     hist, _ = np.histogram(image.ravel(), 256, [0,256])
 
     return hist
@@ -100,7 +100,7 @@ def get_peaks(image, distance ):
     thresh = maxx * 0.25
     #peaks,_ = find_peaks(seq, height=thresh, width = 10)
     peaks = indexes(seq, min_dist = distance) 
-    print("peaks:", len(peaks), " ", peaks)
+    #print("peaks:", len(peaks), " ", peaks)
     return peaks 
 
 #return a bigger image of the input image (not scaling)
@@ -171,7 +171,7 @@ def get_region(image, coords):
     regions = np.arange(1, 10).reshape((3,3))
 
     x,y = center(coords)
-    print("coords:", x, " ", y)
+    #print("coords:", x, " ", y)
     h, w = 0, 0
     
     thresh1 = image.shape[0] // 3
@@ -193,7 +193,7 @@ def is_gate(original, to_big=True, part=1):
     if to_big: 
         image = bigger_image(image, part)  
         original = bigger_image(original, part)
-    show_image(image) 
+    #show_image(image) 
     #distance_between_peaks = image.shape[1]//4 if not to_big else image.shape[1]//12
     distance_between_peaks = image.shape[1]//12
     peaks = get_peaks(image, distance = distance_between_peaks) 
@@ -331,7 +331,7 @@ class MinimalPublisher(Node):
         else :
             region = int(get_region(newimage, coords) )
             draw_coords(newimage, coords) 
-            show_image(newimage)
+            #show_image(newimage)
 
         if region==5 : self.done = True 
         msg.data = region
@@ -342,7 +342,7 @@ class MinimalPublisher(Node):
         if self.done : return 
         
         self.get_logger().info('Planner is telling me to go ' + msg.data)
-        self.image = update_image(self.image, msg.data)
+        #self.image = update_image(self.image, msg.data)
         if self.verbose : show_image(self.image)
 
 
