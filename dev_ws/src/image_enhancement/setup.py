@@ -15,10 +15,10 @@ setup(
     description='subscribing to raw frames, process with GANS, and publish to object detection and target analysis nodes.',
     entry_points={
         'console_scripts': [
-            'talker ='
-            'image_enhancement.publisher:main',
+            'enhance ='
+            'image_enhancement.enhancer:main',
             'listener ='
-            'image_enhancement.subscriber:main',
+            'image_enhancement.enhancer:main',
         ],
     },
 )
