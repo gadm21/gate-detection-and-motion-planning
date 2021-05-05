@@ -22,92 +22,15 @@ def get_args():
     parser.add_argument('--weights', default=None)
     parser.add_argument('--verbose', default=0, type=int)
 
-    parser.add_argument('--method', default="color_correction", type=str, required= True)
+    parser.add_argument('--method', default="color_correction", type=str)
     parser.add_argument('--use_power', default="no", type=str)
-
-    parser.add_argument('--subscriber_topic_name_1', default="right_raw/image_rect_color", type=str)
-    parser.add_argument('--subscriber_topic_name_2', default="left_raw/image_rect_color", type=str)
-    parser.add_argument('--subscriber_message_type', default = "string", type=str)
-
-    parser.add_argument('--publisher_topic_name', default="enhanced_frame", type=str)
-    parser.add_argument('--publisher_message_type', default = "string", type=str)
-    parser.add_argument('--operation_time_period', default = 0.5, type=float)
+    
 
     args = parser.parse_args() 
     return args 
 
 
 
-
-class Subscriber():
-
-    def __init__(self, args, flag = 0):
-
-        self.message_type = args.subscriber_message_type.lower()
-        if not flag : self.topic_name = args.subscriber_topic_name_1.lower()
-        else : self.topic_name = args.subscriber_topic_name_2.lower()
-        self.message_id = 0 
-        self.message = None
-
-        if self.message_type == 'int' :
-            self.subscriber_ = self.create_subscription( Int64, self.topic_name, self.listener_callback)
-        elif self.message_type == 'string' :
-            self.subscriber_ = self.create_subscription( String, self.topic_name, self.listener_callback)
-        else: 
-            print("unkown message type")
-
-        
-        
-    def listener_callback(self, msg):
-        
-        if self.message_type == 'string':
-            self.message = str(msg.data) 
-            self.message_id += 1    
-
-        elif self.message_type == 'int':
-            self.message = int(msg.data) 
-            self.message_id += 1    
-
-        else:
-            print("unkown message type while listening")
-            
-
-
-class Publisher():
-
-    def __init__(self, args): 
-        
-        self.message_type = args.publisher_message_type.lower()
-        self.topic_name = args.publisher_topic_name.lower()
-        self.message_id = 0 
-        self.message = None
-
-        if self.message_type == 'string' :
-            self.publisher_ = self.create_publisher(String, self.topic_name)
-        elif self.message_type == 'int' :
-            self.publisher_ = self.create_publisher(Int64, self.topic_name)
-        else:
-            print("unkown message type")            
-
-        self.subscription = self.create_subscription( String, 'direction', self.listener_callback)
-        
-
-    def publish(self, message):
-
-        if self.message_type == 'string':
-            msg = String() 
-            msg.data = message
-            self.message_id += 1
-            
-        elif self.message_type == 'int':
-            msg = Int64()
-            msg.data = message
-            self.message_id += 1
-
-        else:
-            print("unkown message type while sending")
-
-        self.publisher_.publish(msg) 
 
 
 class GAN():
@@ -140,8 +63,6 @@ class GAN():
     def deprocess(self, prediction):
         prediction = prediction[0] # take only the first item in the batch because we only work on individual images
         return np.uint8((prediction+1.0)*127.5) 
-
-
 
 class Color_correction:
     def __init__(self, args):
@@ -217,7 +138,7 @@ class Color_correction:
         if self.use_power :
             image = self.power_transformation(image)
 
-        return self.channels_stretching(image=)
+        return self.channels_stretching(image= image)
 
 
 class Enhancer(Node):
@@ -227,46 +148,54 @@ class Enhancer(Node):
 
         self.args = args 
         self.method = self.args.method.lower()
-
+        self.message_id = 0
+        self.message = cv2.imread("/home/gad/Desktop/person.png")
         
         if self.method == "color_correction" : self.operator = Color_correction(args)
         elif self.method == "gan" : self.operator = GAN(args)
 
-        self.subscriber_1 = Subscriber(args, flag =0)
-        self.subscriber_2 = Subscriber(args, flag =1)
-        self.publisher = Publisher(args)
-
-        self.timer = self.create_timer(args.operation_time_period, self.timer_callback)
-        self.done = False
+        self.subscriber = self.create_subscription(String, 'raw_image', self.listener_callback, 10)
+        self.publisher = self.create_publisher(String, 'enhanced_image', 10)
+        self.timer = self.create_timer(0.5, self.operate)
 
 
+    def listener_callback(self, msg):
+        self.message = int(msg.data) 
+        self.message_id += 1    
 
-    def timer_callback(self):
-        if self.done : return 
     
-        self.operate()
+    def np2ros(self, image):
+        msg = String() 
+        msg.data = "message"
+        return msg
 
 
     def operate(self):
 
-        image_1 = self.subscriber_1.message
-        enhanced_image_1 = self.operator.operate(image_1)
-        self.publisher.publish(enhanced_image_1)
+        image = self.message
+        enhanced_image = self.operator.operate(image)
+        # show_image(enhanced_image)
+        enhanced_image = self.np2ros(enhanced_image)
+        self.publisher.publish(enhanced_image)
+
+        print("done")
+
+
+
+
+    def show_image(self, image):
+        cv2.imshow('r',image)
+        cv2.waitKey(0) 
+        cv2.destroyWindow('r')
 
 
 
 
 
-
-
-
-
-
-
-
-def main(args):
+def main():
     rclpy.init(args=None)
 
+    args = get_args()
     enhancer = Enhancer(args)
 
     rclpy.spin(enhancer)
@@ -281,6 +210,8 @@ def main(args):
 
 
 if __name__ == '__main__':
-    main()
+    
+    print("start")
+    main(args)
 
 

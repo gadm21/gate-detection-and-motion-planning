@@ -16,9 +16,7 @@ setup(
     entry_points={
         'console_scripts': [
             'enhance ='
-            'image_enhancement.enhancer:main',
-            'listener ='
-            'image_enhancement.enhancer:main',
+            'image_enhancement.enhancer:main'
         ],
     },
 )
