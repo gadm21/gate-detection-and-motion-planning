@@ -37,13 +37,16 @@ class GAN():
 
     def __init__(self, args):
         
+        print()
+        print("model:", args.model)
+        print()
         self.model = self.get_model(args.model)
         self.model.load_weights(args.weights)
         self.verbose = args.verbose
 
 
-    def get_model(self, json_file_path):
-        with open(json_model_path, 'r') as file :
+    def get_model(self, model):
+        with open(model, 'r') as file :
             json_model = file.read()
         
         return model_from_json(json_model)
@@ -55,9 +58,12 @@ class GAN():
 
 
     def operate(self, image):
+        original_size = image.shape[0:2]
+        image = cv2.resize(image, (256, 256))
         batch = self.preprocess(image)
         prediction = self.model.predict(batch)
-        return self.deprocess(prediction)
+        enhanced_image = self.deprocess(prediction)
+        return cv2.resize(enhanced_image, original_size)
 
 
     def deprocess(self, prediction):
