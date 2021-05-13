@@ -11,7 +11,8 @@ from keras.models import model_from_json
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Int64, String 
-
+from sensor_msgs.msg import Image
+# from sensor_msgs.msg import UAVImage
 
 
 
@@ -153,39 +154,58 @@ class Enhancer(Node):
         super().__init__('image_enhancement')
 
         self.args = args 
-        self.method = self.args.method.lower()
-        self.message_id = 0
-        self.message = cv2.imread("/home/gad/Desktop/person.png")
+
+        self.z_frame_id = 0
+        self.l_frame_id = 0
+        self.z_frame = cv2.imread("/home/gad/Desktop/person.png")
+        self.l_frame = cv2.imread("/home/gad/Desktop/person.png")
         
+        self.method = self.args.method.lower()
         if self.method == "color_correction" : self.operator = Color_correction(args)
         elif self.method == "gan" : self.operator = GAN(args)
 
-        self.subscriber = self.create_subscription(String, 'raw_image', self.listener_callback, 10)
-        self.publisher = self.create_publisher(String, 'enhanced_image', 10)
-        self.timer = self.create_timer(0.5, self.operate)
+        self.l_subscriber = self.create_subscription(Image, 'lowlight_camera', self.l_callback, 10)
+        self.z_subscriber = self.create_subscription(Image, '~/left_raw/image_rect_color', self.z_callback, 10)
+
+        self.l_publisher = self.create_publisher(Image, 'enhanced_frame_l', 10)
+        self.z_publisher = self.create_publisher(Image, 'enhanced_frmae_z', 10)
+        
+        # self.timer = self.create_timer(0.5, self.operate)
 
 
-    def listener_callback(self, msg):
-        self.message = int(msg.data) 
-        self.message_id += 1    
+    def l_callback(self, msg):
+        self.l_frame = np.array(msg.data).reshape((msg.height, msg.width, msg.step))
+        self.l_frame_id += 1    
 
-    
+        self.operate('l')
+
+
+    def z_callback(self, msg):
+        self.z_frame = np.array(msg.data).reshape((msg.height, msg.width, msg.step))
+        self.z_frame_id += 1
+
+        self.operate('z')
+
+
     def np2ros(self, image):
-        msg = String() 
-        msg.data = "message"
+        msg = Image()
+        msg.height, msg.width, msg.step = image.shape
+        msg.data = image.reshape(-1).tolist()
         return msg
 
 
-    def operate(self):
+    def operate(self, code):
 
-        image = self.message
+        if code == 'l': image = self.l_frame.copy()
+        elif code == 'z': image = self.z_frame.copy()
+        
         enhanced_image = self.operator.operate(image)
         # show_image(enhanced_image)
         enhanced_image = self.np2ros(enhanced_image)
-        self.publisher.publish(enhanced_image)
-
-        print("done")
-
+        if np.random.randint(0, 50) % 2 :
+            self.l_publisher.publish(enhanced_image)
+        else: 
+            self.z_publisher.publish(enhanced_image)
 
 
 
